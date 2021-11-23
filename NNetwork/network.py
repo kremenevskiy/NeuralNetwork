@@ -45,10 +45,18 @@ class Network(object):
             a = Activations.sigmoid(np.dot(w, a) + b)
         return a
 
-    def SGD(self, training_data, epochs, mini_batch_size, eta, test_data=None, verbose=False):
-        if test_data:
-            n_test = len(test_data)
+    def SGD(self, training_data, epochs, mini_batch_size, eta, validation_data=None, verbose=False,
+            monitor_validation_cost=False, monitor_validation_accuracy=False,
+            monitor_training_cost=False, monitor_training_accuracy=False):
+
         n = len(training_data)
+
+        if validation_data:
+            n_test = len(validation_data)
+
+        validation_cost, validation_accuracy = [], []
+        training_cost, training_accuracy = [], []
+
         for j in range(epochs):
             random.shuffle(training_data)
             mini_batches = [
@@ -56,13 +64,25 @@ class Network(object):
             ]
             for mini_batch in mini_batches:
                 self.update_mini_batch(mini_batch, eta)
+            print(f'Epoch {j}: ', end='')
+            if monitor_training_cost:
+                cost = self.total_cost(training_data)
+                training_cost.append(cost)
+                print(f'Cost_train[{cost:.6f}]', end='..')
+            if monitor_training_accuracy:
+                accuracy = self.accuracy(training_data)
+                training_accuracy.append(accuracy)
+                print(f'Acc_train[{accuracy:.6f}]', end='..')
+            if monitor_validation_cost:
+                cost = self.total_cost(validation_data)
+                validation_cost.append(cost)
+                print(f'Cost_val[{cost:.6f}]', end='..')
+            if monitor_validation_accuracy:
+                accuracy = self.accuracy(validation_data)
+                validation_accuracy.append(accuracy)
+                print(f'Acc_val[{accuracy:.6f}]')
 
-            if verbose:
-                if test_data:
-                    print(f"Epoch {j} - val: {self.evaluate(test_data)} / {n_test}")
-                else:
-                    print(f"Epoch {j} complete")
-                print(f"Epoch {j} - train: {self.evaluate(training_data)} / {n}\n")
+        return validation_cost, validation_accuracy, training_cost, training_accuracy
 
     def update_mini_batch(self, mini_batch, eta):
         n = len(mini_batch)
@@ -99,6 +119,17 @@ class Network(object):
             nabla_b[-l] = delta.sum(1).reshape([len(delta), 1])
             nabla_w[-l] = np.dot(delta, activations[-l - 1].T)
         return nabla_b, nabla_w
+
+    def total_cost(self, data, convert=False):
+        cost = 0.0
+        for x, y in data:
+            a = self.feedforward(x)
+            cost += self.cost.fn(a, y) / len(data)
+        return cost
+
+    def accuracy(self, data):
+        results = [(np.argmax(self.feedforward(x)), np.argmax(y)) for (x, y) in data]
+        return sum(int(x == y) for (x, y) in results) / len(data)
 
     def evaluate(self, test_data):
         test_result = [(np.argmax(self.feedforward(x)), np.argmax(y)) for (x, y) in test_data]
