@@ -21,7 +21,7 @@ class Network(object):
         for j in range(epochs):
             random.shuffle(training_data)
             mini_batches = [
-                training_data[k:k+mini_batch_size] for k in range(0, n, mini_batch_size)
+                training_data[k:k + mini_batch_size] for k in range(0, n, mini_batch_size)
             ]
             for mini_batch in mini_batches:
                 self.update_mini_batch(mini_batch, eta)
@@ -32,18 +32,17 @@ class Network(object):
             print(f"Epoch {j} - train: {self.evaluate(training_data)} / {n}\n")
 
     def update_mini_batch(self, mini_batch, eta):
-        nabla_b = [np.zeros(b.shape) for b in self.biases]
-        nabla_w = [np.zeros(w.shape) for w in self.weights]
-        for x, y in mini_batch:
-            delta_nabla_b, delta_nabla_w = self.backprop(x, y)
-            nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
-            nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
-        self.weights = [w - (eta/len(mini_batch)) * nw for w, nw in zip(self.weights, nabla_w)]
-        self.biases = [b-(eta/len(mini_batch)) * nb for b, nb in zip(self.biases, nabla_b)]
+        n = len(mini_batch)
+        x = np.asarray([_x.ravel() for _x, _y in mini_batch]).T
+        y = np.asarray([_y.ravel() for _x, _y in mini_batch]).T
+        nabla_b, nabla_w = self.backprop(x, y)
+
+        self.weights = [w - (eta / n) * nw for w, nw in zip(self.weights, nabla_w)]
+        self.biases = [b - (eta / n) * nb for b, nb in zip(self.biases, nabla_b)]
 
     def backprop(self, x, y):
-        nabla_b = [np.zeros(b.shape) for b in self.biases]
-        nabla_w = [np.zeros(w.shape) for w in self.weights]
+        nabla_b = [0 for b in self.biases]
+        nabla_w = [0 for w in self.weights]
 
         # feed forward
         activation = x
@@ -58,14 +57,14 @@ class Network(object):
 
         # backpropagation
         delta = self.cost_derivative_mse(activations[-1], y) * self.sigmoid_prime(zs[-1])
-        nabla_b[-1] = delta
+        nabla_b[-1] = delta.sum(1).reshape([len(delta), 1])
         nabla_w[-1] = np.dot(delta, activations[-2].T)
         for l in range(2, self.num_layers):
             z = zs[-l]
             sp = self.sigmoid_prime(z)
-            delta = (np.dot(self.weights[-l+1].T, delta)) * sp
-            nabla_b[-l] = delta
-            nabla_w[-l] = np.dot(delta, activations[-l-1].T)
+            delta = (np.dot(self.weights[-l + 1].T, delta)) * sp
+            nabla_b[-l] = delta.sum(1).reshape([len(delta), 1])
+            nabla_w[-l] = np.dot(delta, activations[-l - 1].T)
         return nabla_b, nabla_w
 
     def evaluate(self, test_data):
