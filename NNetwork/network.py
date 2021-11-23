@@ -2,19 +2,50 @@ import numpy as np
 import random
 
 
+class Activations(object):
+    @staticmethod
+    def sigmoid(z):
+        return 1.0 / (1.0 + np.exp(-z))
+
+    @staticmethod
+    def sigmoid_prime(z):
+        return Activations.sigmoid(z) * (1 - Activations.sigmoid(z))
+
+
+class QuadraticCost(object):
+    @staticmethod
+    def fn(a, y):
+        return 0.5 * np.linalg.norm(a-y) ** 2
+
+    @staticmethod
+    def delta(a, y, z):
+        return a-y * Activations.sigmoid_prime(z)
+
+
+class CrossEntropyCost(object):
+    @staticmethod
+    def fn(a, y):
+        return np.sum(np.nan_to_num(-y * np.log(a) - (1-y) * np.log(1 - a)))
+
+    @staticmethod
+    def delta(a, y, z=0):
+        return a - y
+
+
 class Network(object):
-    def __init__(self, sizes):
+    def __init__(self, sizes, cost=CrossEntropyCost):
         self.num_layers = len(sizes)
         self.sizes = sizes
         self.biases = [np.random.randn(y, 1) for y in sizes[1:]]
         self.weights = [np.random.randn(x, y) for x, y in zip(sizes[1:], sizes[:-1])]  # тут поменял
+        self.cost = cost
 
     def feedforward(self, a):
         for b, w in zip(self.biases, self.weights):
-            a = self.sigmoid(np.dot(w, a) + b)
+            a = Activations.sigmoid(np.dot(w, a) + b)
         return a
 
-    def SGD(self, training_data, epochs, mini_batch_size, eta, test_data=None):
+    def SGD(self, training_data, epochs, mini_batch_size, eta, test_data=None, verbose=False):
         if test_data:
             n_test = len(test_data)
         n = len(training_data)
@@ -25,11 +56,13 @@ class Network(object):
             ]
             for mini_batch in mini_batches:
                 self.update_mini_batch(mini_batch, eta)
-            if test_data:
-                print(f"Epoch {j} - val: {self.evaluate(test_data)} / {n_test}")
-            else:
-                print(f"Epoch {j} complete")
-            print(f"Epoch {j} - train: {self.evaluate(training_data)} / {n}\n")
+
+            if verbose:
+                if test_data:
+                    print(f"Epoch {j} - val: {self.evaluate(test_data)} / {n_test}")
+                else:
+                    print(f"Epoch {j} complete")
+                print(f"Epoch {j} - train: {self.evaluate(training_data)} / {n}\n")
 
     def update_mini_batch(self, mini_batch, eta):
         n = len(mini_batch)
@@ -52,16 +85,16 @@ class Network(object):
         for b, w in zip(self.biases, self.weights):
             z = np.dot(w, activation) + b
             zs.append(z)
-            activation = self.sigmoid(z)
+            activation = Activations.sigmoid(z)
             activations.append(activation)
 
         # backpropagation
-        delta = self.cost_derivative_mse(activations[-1], y) * self.sigmoid_prime(zs[-1])
+        delta = self.cost.delta(activations[-1], y, zs[-1])
         nabla_b[-1] = delta.sum(1).reshape([len(delta), 1])
         nabla_w[-1] = np.dot(delta, activations[-2].T)
         for l in range(2, self.num_layers):
             z = zs[-l]
-            sp = self.sigmoid_prime(z)
+            sp = Activations.sigmoid_prime(z)
             delta = (np.dot(self.weights[-l + 1].T, delta)) * sp
             nabla_b[-l] = delta.sum(1).reshape([len(delta), 1])
             nabla_w[-l] = np.dot(delta, activations[-l - 1].T)
@@ -70,15 +103,3 @@ class Network(object):
     def evaluate(self, test_data):
         test_result = [(np.argmax(self.feedforward(x)), np.argmax(y)) for (x, y) in test_data]
         return sum(int(x == y) for (x, y) in test_result)
-
-    @staticmethod
-    def cost_derivative_mse(output_activations, y):
-        return output_activations - y
-
-    @staticmethod
-    def sigmoid(z):
-        return 1.0 / (1.0 + np.exp(-z))
-
-    @staticmethod
-    def sigmoid_prime(z):
-        return Network.sigmoid(z) * (1 - Network.sigmoid(z))
