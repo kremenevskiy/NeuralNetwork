@@ -17,7 +17,14 @@ x_test = [np.reshape(x / 255, (784, 1)) for x in test[0]]
 y_test = [j for j in test[1]]
 
 training_data = list(zip(x_train, y_train))
+
+training_data, validation_data = training_data[:int(0.8*len(training_data))],\
+                                 training_data[int(0.8*len(training_data)): len(training_data)]
+
 test_data = list(zip(x_test, y_test))
 
-mnist_loader = (training_data, test_data)
+mnist_loader = (training_data, validation_data, test_data)
+
+if __name__ == '__main__':
+    pass
 
