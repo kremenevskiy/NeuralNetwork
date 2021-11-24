@@ -182,3 +182,16 @@ class Network(object):
         net.biases = [np.array(b) for b in data['biases']]
         return net
 
+    @staticmethod
+    def get_metrics(data, start=-10, end=0):
+        val_cost, val_acc, train_cost, train_acc = data[0], data[1], data[2], data[3]
+        n = len(val_cost)
+        if abs(start) > n:
+            start = -n
+        print(f'\tMetrics [{n+start}:{n+end}]:')
+        for i in range(start, end):
+            print(f'Epoch {n+i}: ', end='')
+            print(f'Cost_train[{train_cost[i]:.6f}]', end='..')
+            print(f'Acc_train[{train_acc[i]:.6f}]', end='..')
+            print(f'Cost_val[{val_cost[i]:.6f}]', end='..')
+            print(f'Acc_val[{val_acc[i]:.6f}]')
