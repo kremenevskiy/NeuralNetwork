@@ -45,9 +45,18 @@ class Network(object):
     def __init__(self, sizes, cost=CrossEntropyCost):
         self.num_layers = len(sizes)
         self.sizes = sizes
-        self.biases = [np.random.randn(y, 1) for y in sizes[1:]]
-        self.weights = [np.random.randn(x, y) for x, y in zip(sizes[1:], sizes[:-1])]
+        self.biases, self.weights = None, None
+        self.default_weight_initializer()
         self.cost = cost
+
+    def default_weight_initializer(self):
+        self.biases = [np.random.randn(y, 1) for y in self.sizes[1:]]
+        self.weights = [np.random.randn(x, y) / np.sqrt(y) for x, y in zip(self.sizes[1:], self.sizes[:-1])]
+
+    def large_weight_initializer(self):
+        self.biases = [np.random.randn(y, 1) for y in self.sizes[1:]]
+        self.weights = [np.random.randn(x, y) for x, y in zip(self.sizes[1:], self.sizes[:-1])]
+
 
     def feedforward(self, a):
         for b, w in zip(self.biases, self.weights):
@@ -74,23 +83,29 @@ class Network(object):
             mini_batches = [training_data[k:k + mini_batch_size] for k in range(0, n, mini_batch_size)]
             for mini_batch in mini_batches:
                 self.update_mini_batch(mini_batch, eta, lmbda, n)
-            if verbose:
+            if verbose and \
+                    (monitor_training_cost or monitor_validation_cost or
+                     monitor_training_accuracy or monitor_validation_accuracy):
                 print(f'Epoch {j}: ', end='')
-                if monitor_training_cost:
-                    cost = self.total_cost(training_data)
-                    training_cost.append(cost)
+            if monitor_training_cost:
+                cost = self.total_cost(training_data)
+                training_cost.append(cost)
+                if verbose:
                     print(f'Cost_train[{cost:.6f}]', end='..')
-                if monitor_training_accuracy:
-                    accuracy = self.accuracy(training_data, convert=True)
-                    training_accuracy.append(accuracy)
+            if monitor_training_accuracy:
+                accuracy = self.accuracy(training_data, convert=True)
+                training_accuracy.append(accuracy)
+                if verbose:
                     print(f'Acc_train[{accuracy:.6f}]', end='..')
-                if monitor_validation_cost:
-                    cost = self.total_cost(validation_data, convert=True)
-                    validation_cost.append(cost)
+            if monitor_validation_cost:
+                cost = self.total_cost(validation_data)
+                validation_cost.append(cost)
+                if verbose:
                     print(f'Cost_val[{cost:.6f}]', end='..')
-                if monitor_validation_accuracy:
-                    accuracy = self.accuracy(validation_data)
-                    validation_accuracy.append(accuracy)
+            if monitor_validation_accuracy:
+                accuracy = self.accuracy(validation_data, convert=True)
+                validation_accuracy.append(accuracy)
+                if verbose:
                     print(f'Acc_val[{accuracy:.6f}]')
         return validation_cost, validation_accuracy, training_cost, training_accuracy
 
