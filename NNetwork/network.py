@@ -1,5 +1,7 @@
 import numpy as np
 import random
+import sys
+import json
 
 
 def sigmoid(z):
@@ -144,6 +146,24 @@ class Network(object):
             results = [(np.argmax(self.feedforward(x)), y) for (x, y) in data]
         return sum(int(x == y) for (x, y) in results) / len(data)
 
-    def evaluate(self, test_data):
-        test_result = [(np.argmax(self.feedforward(x)), np.argmax(y)) for (x, y) in test_data]
-        return sum(int(x == y) for (x, y) in test_result)
+    def save(self, filename):
+        data = {
+            "sizes": list(self.sizes),
+            "weights": [w.tolist() for w in self.weights],
+            "biases": [b.tolist() for b in self.weights],
+            "cost": str(self.cost.__name__)
+        }
+        with open(filename, 'w') as f:
+            json.dump(data, f)
+
+    @staticmethod
+    def load(filename):
+        with open(filename, 'r') as f:
+            data = json.load(f)
+        cost = getattr(sys.modules[__name__], data['cost'])
+        sizes = data['sizes']
+        net = Network(sizes, cost=cost)
+        net.weights = [np.array(w) for w in data['weights']]
+        net.biases = [np.array(b) for b in data['biases']]
+        return net
+
