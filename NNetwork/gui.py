@@ -23,7 +23,7 @@ l1 = Label()
 lastx, lasty = None, None
 
 training_data, validation_data, test_data = mnist_loader
-net = Model.load('neural_init.json')
+net = Model.load('hardly_regularized.json')
 
 print(f'Test network:\n\tAccuracy on test: {net.accuracy(test_data)}')
 
